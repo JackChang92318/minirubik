@@ -32,7 +32,7 @@ void rank_to_unrank(uint16_t rank, uint8_t *perm) {
 void unrank_to_rank(const uint8_t *perm, uint16_t *rank) {
     uint8_t available[7] = {0, 1, 2, 3, 4, 5, 6};
     *rank = 0;
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < 7; i++) {
         uint16_t index = 0;
         while (available[index] != perm[i]) {
             index++;
@@ -52,7 +52,7 @@ int main(){
     unsigned head = 0;
     unsigned tail = 0;
 
-    for (unsigned i = 0; i < PERM_COUNT; ++i) {
+    for (unsigned i = 0; i < PERM_COUNT; i++) {
         pdb[i] = 255;
     }
 
@@ -66,16 +66,16 @@ int main(){
         uint8_t current_perm[CUBIES]; ;
         rank_to_unrank(current_rank, current_perm);
 
-        for (int face = 0; face < 3; ++face) {
+        for (int face = 0; face < 3; face++) {
             uint8_t working_perm[CUBIES];
             uint8_t next_perm[CUBIES];
 
-            for (int i = 0; i < CUBIES; ++i) {
+            for (int i = 0; i < CUBIES; i++) {
                 working_perm[i] = current_perm[i];
             }
 
             for (int turns = 1; turns <= 3; ++turns) {
-                for (int i = 0; i < CUBIES; ++i) {
+                for (int i = 0; i < CUBIES; i++) {
                     next_perm[i] = working_perm[source[face][i]];
                 }
 
@@ -88,7 +88,7 @@ int main(){
                     tail = tail + 1;
                 }
 
-                for (int i = 0; i < CUBIES; ++i) {
+                for (int i = 0; i < CUBIES; i++) {
                     working_perm[i] = next_perm[i];
                 }
             }
