@@ -26,16 +26,16 @@ static const uint8_t twist[3][CUBIES] = {
 void unrank_to_rank(const uint8_t *perm, uint16_t *rank) {
     uint8_t available[7] = {0, 1, 2, 3, 4, 5, 6};
     *rank = 0;
-    for (int i = 0; i < 7; i++) {
+    for(int i = 0; i < 7; i++){
         uint16_t index = 0;
-        while (available[index] != perm[i]) {
+        while(available[index] != perm[i]){
             index++;
         }
-        for (int j = index; j < 6 - i; ++j) {
+        for(int j = index; j < 6 - i; ++j){
             available[j] = available[j + 1];
         }
         uint16_t fact = 1;
-        for (int j = 1; j <= 6 - i; ++j) {
+        for(int j = 1; j <= 6 - i; ++j){
             fact *= j;
         }
         *rank += index * fact;
@@ -46,7 +46,7 @@ void unrank_to_rank(const uint8_t *perm, uint16_t *rank) {
 static uint16_t rank_orientation(const uint8_t *o){
     uint16_t rank = 0;
 
-    for (int i = 0; i < 6; i++) {
+    for(int i = 0; i < 6; i++){
         rank = rank * 3 + o[i];
     }
 
@@ -60,14 +60,14 @@ static uint8_t heuristic(const state_t *state){
     uint8_t h_perm = permutation_pdb[rank];
     uint8_t h_ori = orientation_pdb[rank_orientation(state->o)];
 
-    if (h_perm > h_ori) {
+    if(h_perm > h_ori){
         return h_perm;
     }
     return h_ori;
 }
 
 static int is_solved(const state_t *state){
-    for (int i = 0; i < CUBIES; i++) {
+    for(int i = 0; i < CUBIES; i++){
         if (state->p[i] != i || state->o[i] != 0) {
             return 0;
         }
@@ -78,10 +78,10 @@ static int is_solved(const state_t *state){
 static state_t quarter_turn(state_t state, uint8_t face){
     state_t result;
 
-    for (uint8_t i = 0; i < CUBIES; i++) {
+    for(uint8_t i = 0; i < CUBIES; i++){
         uint8_t from = source[face][i];
         result.p[i] = state.p[from];
-        result.o[i] = (uint8_t) ((state.o[from] + twist[face][i]) % 3U);
+        result.o[i] = (uint8_t)((state.o[from] + twist[face][i]) % 3U);
     }
     return result;
 }
@@ -95,6 +95,7 @@ static state_t apply_move(state_t state, uint8_t move){
 }
 
 
+#ifndef VERIFY_HOST
 static void unrank_to_orientation(uint16_t rank, uint8_t *o){
     uint8_t sum = 0;
 
@@ -106,7 +107,9 @@ static void unrank_to_orientation(uint16_t rank, uint8_t *o){
     o[6] = (uint8_t) ((3 - sum % 3) % 3);
 }
 
-static int solve(state_t start, uint8_t path[11]){
+#endif /* VERIFY_HOST */
+
+static int solve(state_t start, uint8_t path[11], uint64_t *generated_out){
     state_t states[12];
 
     uint8_t next_moves[12];
@@ -128,11 +131,11 @@ static int solve(state_t start, uint8_t path[11]){
             int f = depth + heuristic(&states[depth]);
 
             if(f > bound){
-                if (f < next_bound) {
+                if(f < next_bound){
                     next_bound = f;
                 }
 
-                if (depth == 0) {
+                if(depth == 0){
                     break;
                 } else {
                     depth--;
@@ -173,18 +176,22 @@ static int solve(state_t start, uint8_t path[11]){
         bound = next_bound;
     }
 
-    printf("Generated states: %" PRIu64 "\n", generated);
+    if (generated_out != NULL)
+        *generated_out = generated;
 
     if (found) {
         return depth;
     }
     return -1;
 }
+#ifndef VERIFY_HOST
 static int run_test(state_t start, int expected_length)
 {
     uint8_t path[11];
     
-    int length = solve(start, path);
+    uint64_t generated = 0;
+    int length = solve(start, path, &generated);
+    printf("Generated states: %" PRIu64 "\n", generated);
 
     if (length == -1) {
         printf("FAIL: no solution found\n");
@@ -260,3 +267,4 @@ int main(void)
     printf("Orientation round trip: %s\n", failures == 0 ? "ok" : "FAILED");
     return failures == 0 ? 0 : 1;
 }
+#endif /* VERIFY_HOST */
