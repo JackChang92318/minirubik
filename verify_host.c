@@ -41,8 +41,14 @@ static double wall_seconds(void)
  * twist, quarter_turn, apply_move, heuristic, is_solved and solve() all come
  * from here, together with the two pattern databases.
  */
+/* 暫時兼容 ida_solver.c 裡現有的條件編譯 */
 #define VERIFY_HOST
+
+/* 讓求解器的 main 不與驗證程式的 main 衝突 */
+#define main ida_solver_program_main
 #include "ida_solver.c"
+#undef main
+#undef VERIFY_HOST
 
 enum {
     PERMUTATIONS = 5040,

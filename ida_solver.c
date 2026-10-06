@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <inttypes.h>
+#include <string.h>
 #include "pdb_data.h"
 #include "pdb_data_ori.h"
 
@@ -94,21 +95,6 @@ static state_t apply_move(state_t state, uint8_t move){
     return state;
 }
 
-
-#ifndef VERIFY_HOST
-static void unrank_to_orientation(uint16_t rank, uint8_t *o){
-    uint8_t sum = 0;
-
-    for(int i = 5; i >= 0; i--){
-        o[i] = (uint8_t) (rank % 3);
-        sum = (uint8_t) (sum + o[i]);
-        rank /= 3;
-    }
-    o[6] = (uint8_t) ((3 - sum % 3) % 3);
-}
-
-#endif /* VERIFY_HOST */
-
 static int solve(state_t start, uint8_t path[11], uint64_t *generated_out){
     state_t states[12];
 
@@ -184,87 +170,70 @@ static int solve(state_t start, uint8_t path[11], uint64_t *generated_out){
     }
     return -1;
 }
-#ifndef VERIFY_HOST
-static int run_test(state_t start, int expected_length)
+static int parse_state(const char *input, state_t *state)
 {
+    if (strlen(input) != 14)
+        return 0;
+
+    unsigned seen = 0;
+    unsigned orientation_sum = 0;
+
+    for (int i = 0; i < CUBIES; ++i) {
+        if (input[i] < '1' || input[i] > '7')
+            return 0;
+
+        uint8_t cubie = (uint8_t) (input[i] - '1');
+        unsigned bit = 1U << cubie;
+
+        if (seen & bit)
+            return 0;
+
+        seen |= bit;
+        state->p[i] = cubie;
+
+        if (input[i + CUBIES] < '1' ||
+            input[i + CUBIES] > '3')
+            return 0;
+
+        state->o[i] =
+            (uint8_t) (input[i + CUBIES] - '1');
+        orientation_sum += state->o[i];
+    }
+
+    return orientation_sum % 3U == 0;
+}
+
+int main(int argc, char **argv){
+    state_t start;
+
+    if(argc != 2 || !parse_state(argv[1], &start)){
+        fprintf(stderr,
+                "Usage: %s PPPPPPPOOOOOOO\n"
+                "P: digits 1-7, each appearing once.\n"
+                "O: digits 1-3; decoded orientations "
+                "must sum to a multiple of 3.\n",
+                argc > 0 && argv[0] ? argv[0] : "ida_solver");
+        return 2;
+    }
+
     uint8_t path[11];
-    
-    uint64_t generated = 0;
-    int length = solve(start, path, &generated);
-    printf("Generated states: %" PRIu64 "\n", generated);
+    int length = solve(start, path, NULL);
 
-    if (length == -1) {
-        printf("FAIL: no solution found\n");
+    if(length < 0){
+        fputs("No solution found within 11 moves\n", stderr);
         return 1;
     }
 
-    state_t replay = start;
-    for (int i = 0; i < length; i++) {
-        replay = apply_move(replay, path[i]);
-    }
+    static const char *const move_names[9] = {
+        "R", "R2", "R'",
+        "B", "B2", "B'",
+        "D", "D2", "D'"
+    };
 
-    printf("Expected: %d, actual: %d, replay solved: %d\n",
-           expected_length, length, is_solved(&replay));
+    for(int i = 0; i < length; i++)
+        printf("%s%s", i == 0 ? "" : " ", move_names[path[i]]);
 
-    if (length != expected_length || !is_solved(&replay)) {
-        printf("FAIL\n");
-        return 1;
-    }
+    putchar('\n');
 
-    printf("PASS\n");
-    return 0;
+    return fflush(stdout) != 0 || ferror(stdout) ? 1 : 0;
 }
-
-int main(void)
-{
-    state_t solved = {
-        {0, 1, 2, 3, 4, 5, 6},
-        {0, 0, 0, 0, 0, 0, 0}
-    };
-
-    state_t distance11 = {
-        {1, 0, 2, 3, 4, 5, 6},
-        {0, 0, 0, 0, 0, 0, 0}
-    };
-
-    state_t one_move = quarter_turn(solved, 0);
-
-    state_t twisted = {
-        {0, 1, 2, 3, 4, 5, 6},
-        {1, 2, 0, 0, 0, 0, 0}
-    };
-
-    int failures = 0;
-
-    printf("Test: solved\n");
-    failures += run_test(solved, 0);
-
-    printf("Test: one R move\n");
-    failures += run_test(one_move, 1);
-
-    printf("Test: twisted corners\n");
-    failures += run_test(twisted, 10);
-
-    printf("Test: distance 11\n");
-    failures += run_test(distance11, 11);  
-
-    printf("Failed tests: %d\n", failures);
-    uint8_t test_o[CUBIES] = {1, 2, 0, 0, 0, 0, 0};
-    printf("Rank of orientation {1, 2, 0, 0, 0, 0, 0}: %u\n", rank_orientation(test_o));
-
-    for (uint16_t rank = 0; rank < 729; rank++) {
-        uint8_t o[CUBIES];
-        unrank_to_orientation(rank, o);
-        unsigned sum = 0;
-        for (int i = 0; i < CUBIES; i++) {
-            sum += o[i];
-        }
-        if (rank_orientation(o) != rank || sum % 3 != 0) {
-            printf("Orientation round trip failed at %u\n", rank);
-            failures++;
-        }
-    }
-    printf("Orientation round trip: %s\n", failures == 0 ? "ok" : "FAILED");
-    return failures == 0 ? 0 : 1;
-}
-#endif /* VERIFY_HOST */
