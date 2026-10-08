@@ -200,7 +200,7 @@ int main(void){
     if (!check_distances())
         return 1;
 
-    FILE *out = fopen("pdb_data_ori.h", "w");
+    FILE *out = fopen("include/pdb_data_ori.h", "w");
     if (out == NULL) {
         perror("Cannot create pdb_data_ori.h");
         return 1;

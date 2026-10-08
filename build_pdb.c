@@ -95,7 +95,7 @@ int main(){
         }
     }
 
-    FILE *out = fopen("pdb_data.h", "w");
+    FILE *out = fopen("include/pdb_data.h", "w");
 
     fprintf(out, "#ifndef PDB_DATA_H\n");
     fprintf(out, "#define PDB_DATA_H\n\n");

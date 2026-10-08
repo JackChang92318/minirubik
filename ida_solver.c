@@ -3,8 +3,8 @@
 #include <limits.h>
 #include <inttypes.h>
 #include <string.h>
-#include "pdb_data.h"
-#include "pdb_data_ori.h"
+#include "include/pdb_data.h"
+#include "include/pdb_data_ori.h"
 
 #define CUBIES 7
 
