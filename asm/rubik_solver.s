@@ -1,11 +1,19 @@
-# Generated from ida_solver_rank_led_source.S; RENDER=0.
+# Generated from asm/rubik_solver_source.S; RENDER=1.
 # AI-assisted implementation. Edit the source and rebuild; see LED_README.md.
 .text
 main:
     la sp, stack_top
+    jal ra, led_init
+    bnez a0, led_main_ready
+    la a0, led_error
+    jal ra, print_string
+    li a0, 1
+    j led_main_finish
+led_main_ready:
     la a0, input_state
     li a1, -1
     jal ra, run_case
+led_main_finish:
     la t0, test_status
     sw a0, 0(t0)
     la a0, msg_static
@@ -39,6 +47,9 @@ run_case:
     la a1, start_state
     jal ra, parse_state
     beqz a0, case_invalid
+    la a0, start_state
+    jal ra, render_cube
+    jal ra, led_pause
     la a0, start_state
     jal ra, rank_permutation
     sw a0, 0(sp)
@@ -97,6 +108,12 @@ case_no_separator:
     la a0, replay_next
     la a1, replay_state
     jal ra, copy_state
+    la t0, led_move_index
+    addi t1, s3, 1
+    sw t1, 0(t0)
+    la a0, replay_state
+    jal ra, render_cube
+    jal ra, led_pause
     addi s3, s3, 1
     blt s3, s2, case_replay_loop
 case_replay_done:
@@ -421,6 +438,147 @@ ida_return:
     lw s0, 40(sp)
     lw ra, 60(sp)
     addi sp, sp, 64
+    ret
+led_init:
+    li t0, LED_MATRIX_0_WIDTH
+    li t1, 35
+    bne t0, t1, led_init_fail
+    li t0, LED_MATRIX_0_HEIGHT
+    li t1, 25
+    bne t0, t1, led_init_fail
+    li t0, LED_MATRIX_0_BASE
+    li t1, 875
+led_clear_loop:
+    sw zero, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, -1
+    bnez t1, led_clear_loop
+    la t0, led_move_index
+    sw zero, 0(t0)
+    la t0, led_frames_drawn
+    sw zero, 0(t0)
+    li a0, 1
+    ret
+led_init_fail:
+    li a0, LED_MATRIX_0_WIDTH
+    li a7, 1
+    ecall
+    li a0, 32
+    li a7, 11
+    ecall
+    li a0, LED_MATRIX_0_HEIGHT
+    li a7, 1
+    ecall
+    li a0, 10
+    li a7, 11
+    ecall
+    li a0, 0
+    ret
+render_cube:
+    addi sp, sp, -32
+    sw ra, 28(sp)
+    sw s0, 24(sp)
+    sw s1, 20(sp)
+    sw s2, 16(sp)
+    sw s3, 12(sp)
+    sw s4, 8(sp)
+    sw s5, 4(sp)
+    sw s6, 0(sp)
+    mv s0, a0
+    li s1, LED_MATRIX_0_BASE
+    la s2, led_facelets
+    li s3, 24
+    la s4, led_palette
+    la s5, led_corner_colors
+led_facelet_loop:
+    lbu t0, 0(s2)
+    beqz t0, led_fixed_corner
+    addi t0, t0, -1
+    add t1, s0, t0
+    lbu t2, 0(t1)
+    addi t2, t2, 1
+    lbu t3, 7(t1)
+    j led_corner_ready
+led_fixed_corner:
+    li t2, 0
+    li t3, 0
+led_corner_ready:
+    lbu t4, 1(s2)
+    add t3, t3, t4
+    li t4, 3
+    blt t3, t4, led_color_slot_ready
+    addi t3, t3, -3
+led_color_slot_ready:
+    slli t0, t2, 1
+    add t0, t0, t2
+    add t0, t0, t3
+    add t0, s5, t0
+    lbu t0, 0(t0)
+    slli t0, t0, 2
+    add t0, s4, t0
+    lw a2, 0(t0)
+    lbu a0, 2(s2)
+    lbu a1, 3(s2)
+    mv a3, s1
+    jal ra, led_paint_facelet
+    addi s2, s2, 4
+    addi s3, s3, -1
+    bnez s3, led_facelet_loop
+    li t0, 3128
+    add t0, s1, t0
+    la t1, led_move_index
+    lw t2, 0(t1)
+    li t1, 0
+led_progress_loop:
+    li t3, 0x202020
+    bge t1, t2, led_progress_color_ready
+    li t3, 0x00ff00
+led_progress_color_ready:
+    sw t3, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, 1
+    li t4, 11
+    blt t1, t4, led_progress_loop
+    la t0, led_frames_drawn
+    lw t1, 0(t0)
+    addi t1, t1, 1
+    sw t1, 0(t0)
+    lw s6, 0(sp)
+    lw s5, 4(sp)
+    lw s4, 8(sp)
+    lw s3, 12(sp)
+    lw s2, 16(sp)
+    lw s1, 20(sp)
+    lw s0, 24(sp)
+    lw ra, 28(sp)
+    addi sp, sp, 32
+    ret
+led_paint_facelet:
+    slli t0, a1, 5
+    slli t1, a1, 1
+    add t0, t0, t1
+    add t0, t0, a1
+    add t0, t0, a0
+    slli t0, t0, 2
+    add t0, a3, t0
+    li t1, 3
+led_facelet_row:
+    sw a2, 0(t0)
+    sw a2, 4(t0)
+    sw a2, 8(t0)
+    sw a2, 12(t0)
+    addi t0, t0, 140
+    addi t1, t1, -1
+    bnez t1, led_facelet_row
+    ret
+led_pause:
+    la t0, led_delay_iterations
+    lw t0, 0(t0)
+    beqz t0, led_pause_done
+led_pause_loop:
+    addi t0, t0, -1
+    bnez t0, led_pause_loop
+led_pause_done:
     ret
 .data
 static_data_start:
@@ -3964,4 +4122,39 @@ move_tables:
     .word perm_move_6, ori_move_6
     .word perm_move_7, ori_move_7
     .word perm_move_8, ori_move_8
+led_error: .string "FAIL: add LED Matrix 0 with Width=35 and Height=25.\n"
+.align 4
+led_move_index: .word 0
+led_frames_drawn: .word 0
+led_delay_iterations: .word 5000000
+led_palette:
+    .word 0xffffff, 0x00b050, 0xff2020, 0x2060ff, 0xff8000, 0xffe000
+led_corner_colors:
+    .byte 0,1,4, 0,2,1, 5,1,2, 5,4,1
+    .byte 0,3,2, 5,2,3, 5,3,4, 0,4,3
+led_facelets:
+    .byte 7, 0, 9, 0
+    .byte 4, 0, 13, 0
+    .byte 0, 0, 9, 3
+    .byte 1, 0, 13, 3
+    .byte 7, 1, 0, 7
+    .byte 0, 2, 4, 7
+    .byte 6, 2, 0, 10
+    .byte 3, 1, 4, 10
+    .byte 0, 1, 9, 7
+    .byte 1, 2, 13, 7
+    .byte 3, 2, 9, 10
+    .byte 2, 1, 13, 10
+    .byte 1, 1, 18, 7
+    .byte 4, 2, 22, 7
+    .byte 2, 2, 18, 10
+    .byte 5, 1, 22, 10
+    .byte 4, 1, 27, 7
+    .byte 7, 2, 31, 7
+    .byte 5, 2, 27, 10
+    .byte 6, 1, 31, 10
+    .byte 3, 0, 9, 14
+    .byte 2, 0, 13, 14
+    .byte 6, 0, 9, 17
+    .byte 5, 0, 13, 17
 static_data_end: .byte 0
