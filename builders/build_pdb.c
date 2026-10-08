@@ -121,35 +121,5 @@ int main(){
 
     printf("Created pdb_data.h\n");
 
-    FILE *asm_out = fopen("pdb_data.s", "w");
-    if (asm_out == NULL) {
-        perror("Cannot open pdb_data.s");
-        return 1;
-    }
-
-    fprintf(asm_out, ".section .rodata\n");
-    fprintf(asm_out, "permutation_pdb:\n");
-
-    for (unsigned i = 0; i < PERM_COUNT; ++i) {
-        if (i % 16 == 0) {
-            fprintf(asm_out, "    .byte ");
-        }
-
-        fprintf(asm_out, "%u", (unsigned) pdb[i]);
-
-        if (i % 16 == 15 || i + 1 == PERM_COUNT) {
-            fprintf(asm_out, "\n");
-        } else {
-            fprintf(asm_out, ", ");
-        }
-    }
-
-    if (fclose(asm_out) != 0) {
-        perror("Cannot finish writing pdb_data.s");
-        return 1;
-    }
-
-    printf("Created pdb_data.s\n");
-
     return 0;
 }
